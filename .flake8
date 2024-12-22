@@ -1,0 +1,6 @@
+[flake8]
+exclude = __init__.py, __pycache__, .venv, migrations, .git, users/migrations, habits/migrations
+max-line-length = 127
+max-complexity = 20
+ignore = D100,D107,D106,D105,D101,D102,D400,D201,D202,D103,D104,D205
+inline-quotes = "
