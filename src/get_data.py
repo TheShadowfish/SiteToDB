@@ -1,3 +1,5 @@
+import time
+
 import pandas as pd
 
 import os
@@ -66,7 +68,7 @@ class SelAtsenergo:
 
         driver = self.create_driver(user_id)
         driver.get(self.__url)
-
+        time.sleep(15)
         table = driver.find_element(By.ID, "aid_stats_table")
         print(table.text)
         print("-----------------------")
@@ -86,6 +88,6 @@ class SelAtsenergo:
 
         print(df)
         print("-----------------------")
-        driver.quit()
+        # driver.quit()
 
         return f"data/my_csv_{current_date}.csv"
