@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 
 import psycopg2
@@ -13,21 +14,22 @@ load_dotenv()
 # from abc import ABC, abstractmethod
 
 
-class DBManager():
+class DBManager:
     """
     Связь с базой данных
     """
 
     def __init__(self):
         self.file_extension = 'PostgresSQL'
-        self.__db_name = os.getenv('DB_POSTRESQL_DB_NAME'),
-        self.__tables = ('statistics')
+        self.__db_name = os.getenv('DB_POSTRESQL_DB_NAME')
+        self.__tables = ['statistics',]
 
         self.conn_params = {
-            "host": os.getenv('DB_POSTRESQL_USER'),
+            "host": os.getenv('DB_POSTRESQL_HOST'),
             "database": self.__db_name,
-            "user": os.getenv('DB_POSTRESQL_HOST'),
-            "password": os.getenv('DB_POSTRESQL_PASSWORD')}
+            "user": os.getenv('DB_POSTRESQL_USER'),
+            "password": os.getenv('DB_POSTRESQL_PASSWORD')
+        }
 
         self.check_bd_script()
 
@@ -55,9 +57,9 @@ class DBManager():
     def create_statistics_db(self):
         """Create database if not exists"""
         postgre_params = {
-            "host": os.getenv('DB_POSTRESQL_USER'),
+            "host": os.getenv('DB_POSTRESQL_HOST'),
             "database": "postgres",
-            "user": os.getenv('DB_POSTRESQL_HOST'),
+            "user": os.getenv('DB_POSTRESQL_USER'),
             "password": os.getenv('DB_POSTRESQL_PASSWORD')}
 
         con = psycopg2.connect(**postgre_params)
@@ -76,25 +78,60 @@ class DBManager():
                 cur.execute('TRUNCATE TABLE statistics RESTART IDENTITY CASCADE;')
                 print("Таблица statistics удалена!")
         conn.close()
+        # drop_table = "DROP TABLE statistics;"
+        #
+        # with psycopg2.connect(**self.conn_params) as conn:
+        #     with conn.cursor() as cur:
+        #         cur.execute(drop_table)
+        #         print("Таблица statistics дропнута!")
+
+        conn.close()
+
+
 
     def generate_bd_script(self):
         """
         Create tables for statistics_DB
         """
 
-        create_statistics = "CREATE TABLE statistics (\
+
+
+        create_statistics = "CREATE TABLE statistics ( \
+                                    history_id int UNIQUE PRIMARY KEY, \
+                                    day date NOT NULL, \
+                                    price_zone int  NOT NULL, \
+                                    PCB_index float not null, \
+                                    percent_change varchar(8) NOT NULL, \
+                                    planed_volume_consumption float NOT NULL, \
+                                    percent_change_2 varchar(8) NOT NULL, \
+                                    planed_volume_prod_TES float NOT NULL, \
+                                    planed_volume_prod_GES float NOT NULL, \
+                                    planed_volume_prod_AES float NOT NULL, \
+                                    planed_volume_prod_SES_VES float NOT NULL \
+                                    );"
+
+
+        create_employers = "CREATE TABLE employers (\
                                     employer_id int UNIQUE PRIMARY KEY,\
                                     name varchar(200) NOT NULL,\
                                     url varchar(200) NOT NULL,\
                                     vacancies_url varchar(250) NOT NULL\
                                     );"
 
+        # correct_tuple_list = [("День", "Ценовая зона",	"Индекс РСВ на покупку руб/МВт*ч", "% изм", "Объем полного планового потребления МВт*ч",
+        #                   "% изм1", "Объем планового производства по типам станций МВт*ч ТЭС", "Объем планового производства по типам станций МВт*ч ГЭС",
+        #                   "Объем планового производства по типам станций МВт*ч АЭС", "Объем планового производства по типам станций МВт*ч СЭС/ВЭС"),]
+        #('23.11.2024', '2', '1991.87', '+3.49%', '698681.539', '+0.80%', '414180.837', '277239.000', '0.000', '330.103')
 
         print("Подключение...")
+
         with psycopg2.connect(**self.conn_params) as conn:
             with conn.cursor() as cur:
-                cur.execute(create_statistics)
-                print("Таблица statistics создана!")
+                try:
+                    cur.execute(create_statistics)
+                    print("Таблица statistics создана!")
+                except Exception as e:
+                    print(f'Исключение {e}. Запрос {create_statistics} не пашет')
 
         conn.close()
 
@@ -110,41 +147,31 @@ class DBManager():
                     print(row)
         conn.close()
 
-    def write_to_database(self, csv_file_path: str, append_only_new_data=False):
+    def write_to_database(self, csv_file_path: str):
 
         if not os.path.exists(csv_file_path):
             print(f"Данные по адресу {csv_file_path} отсутствуют.")
             return
-        #     parent_dir = os.path.dirname(os.path.abspath(__file__))
-        #     filepath = os.path.join(parent_dir, filename)
-        # return filepath
-
-        data_csv = []
-
-        with open(csv_file_path) as my_csv:
-            reader = csv.DictReader(my_csv)
-            data_csv = list(reader)
 
 
-            data_csv.pop([0])
+        tuple_string = DBManager.get_tuple_list_from_file(csv_file_path)
+        string_s = ', '.join(['%s' for i in range(len(tuple_string[0]))])
+
+        print(f"\n +++++++  INSERT INTO {self.__tables[0]} VALUES ({string_s}), tuple_string \n +++++++")
+        [print(s) for s in tuple_string]
+        input("press any key...")
 
 
-        # количество параметров VALUES в INSERT INTO, т.е. (%s, %s, ... %s)
-        string_s = ', '.join(['%s' for i in range(len(data_csv[0]))])
-
-        # превращает числовые значения в числа, строковые не меняет
-        int_from_str = lambda x: int(x) if x.isdigit() else x
-        # список кортежей для cur.executemany
-        tuple_string = [tuple([int_from_str(v) for v in line.values()]) for line in data_csv]
 
         conn2 = psycopg2.connect(**self.conn_params)
         cur = conn2.cursor()
-        # print(f"INSERT INTO {tablename} VALUES ({string_s}) {tuple_string}")
 
         try:
             cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", tuple_string)
         except Exception as e:
-            print(f'Ошибка: {e}')
+            print(f'\n ОШИБКА: {e} при записи следующего:')
+            print(f"INSERT INTO {self.__tables[0]} VALUES ({string_s}) {tuple_string}")
+            input('Ошибка, ознакомьтесь! Программа продолжит работу после нажатия Enter. \n')
         else:
             # если запрос без ошибок - заносим в БД
             conn2.commit()
@@ -168,3 +195,32 @@ class DBManager():
                     print(row)
         conn.close()
 
+    @staticmethod
+    def get_tuple_list_from_file(filepath):
+
+        # correct_tuple_list = [("День", "Ценовая зона",	"Индекс РСВ на покупку руб/МВт*ч", "% изм", "Объем полного планового потребления МВт*ч",
+        #                   "% изм1", "Объем планового производства по типам станций МВт*ч ТЭС", "Объем планового производства по типам станций МВт*ч ГЭС",
+        #                   "Объем планового производства по типам станций МВт*ч АЭС", "Объем планового производства по типам станций МВт*ч СЭС/ВЭС"),]
+
+        correct_tuple_list=[]
+
+        with open(filepath, 'rt') as my_txt:
+            counter = 0
+
+            for data_line in my_txt:
+                if counter > 1:
+                    next_line = data_line.strip("\r""\n").replace(" ", "")
+                    next_tuple = tuple(next_line.split(","))
+
+                    correct_tuple_list.append(next_tuple)
+                counter +=1
+
+
+            return correct_tuple_list
+
+
+
+
+
+
+        tuple_string = [tuple([int_from_str(v) for v in line.values()]) for line in data_csv]

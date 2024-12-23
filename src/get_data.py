@@ -77,9 +77,15 @@ class SelAtsenergo:
 
         current_date = datetime.date.today().isoformat()
 
+        df[0].to_json(f"data/my_csv_{current_date}.json" ,index=False)
+
+        print(df[0].to_dict())
+
         # and now we get this table
         df[0].to_csv(f"data/my_csv_{current_date}.csv", index=False)
 
         print(df)
         print("-----------------------")
         driver.quit()
+
+        return f"data/my_csv_{current_date}.csv"
