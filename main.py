@@ -27,9 +27,12 @@ def user_interaction():
 
         elif what_to_do == "2":
             DBman = DBManager()
+            DBman.drop_all()
+            DBman.create_database_script()
+            DBman.create_tables_script()
+
 
             DBman.write_to_database(filepath)
-
             DBman.print_database_table(0)
 
 
@@ -41,7 +44,7 @@ def user_interaction():
             DBman.get_data_from_bd("SELECT * FROM statistics;", "Таблица статистики")
 
         elif what_to_do == "4":
-            drop_all()
+            print("NotImplemented")
 
         elif what_to_do == "5":
             print("NotImplemented")

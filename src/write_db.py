@@ -31,7 +31,7 @@ class DBManager:
             "password": os.getenv('DB_POSTRESQL_PASSWORD')
         }
 
-        self.check_bd_script()
+        # self.check_bd_script()
 
     def check_bd_script(self):
         """
@@ -48,13 +48,15 @@ class DBManager:
                 exit(1)
             else:
                 print(f'create {self.__db_name}...')
-                self.create_statistics_db()
+                self.create_database_script()
                 print(f'generate tables {self.__tables}...')
-                self.generate_bd_script()
+                self.create_tables_script()
         else:
             print(f'База данных {self.conn_params} уже существует. Продолжаем работу.')
 
-    def create_statistics_db(self):
+
+
+    def create_database_script(self):
         """Create database if not exists"""
         postgre_params = {
             "host": os.getenv('DB_POSTRESQL_HOST'),
@@ -71,30 +73,13 @@ class DBManager:
         con.close()
         print(f"{self.__db_name} создана! ")
 
-    def clear_all_tables(self):
-        print("clear_all_tables")
-        with psycopg2.connect(**self.conn_params) as conn:
-            with conn.cursor() as cur:
-                cur.execute('TRUNCATE TABLE statistics RESTART IDENTITY CASCADE;')
-                print("Таблица statistics удалена!")
-        conn.close()
-        # drop_table = "DROP TABLE statistics;"
-        #
-        # with psycopg2.connect(**self.conn_params) as conn:
-        #     with conn.cursor() as cur:
-        #         cur.execute(drop_table)
-        #         print("Таблица statistics дропнута!")
-
-        conn.close()
 
 
 
-    def generate_bd_script(self):
+    def create_tables_script(self):
         """
         Create tables for statistics_DB
         """
-
-
 
         create_statistics = "CREATE TABLE statistics ( \
                                     history_id int UNIQUE PRIMARY KEY, \
@@ -111,19 +96,12 @@ class DBManager:
                                     );"
 
 
-        create_employers = "CREATE TABLE employers (\
-                                    employer_id int UNIQUE PRIMARY KEY,\
-                                    name varchar(200) NOT NULL,\
-                                    url varchar(200) NOT NULL,\
-                                    vacancies_url varchar(250) NOT NULL\
-                                    );"
-
         # correct_tuple_list = [("День", "Ценовая зона",	"Индекс РСВ на покупку руб/МВт*ч", "% изм", "Объем полного планового потребления МВт*ч",
         #                   "% изм1", "Объем планового производства по типам станций МВт*ч ТЭС", "Объем планового производства по типам станций МВт*ч ГЭС",
         #                   "Объем планового производства по типам станций МВт*ч АЭС", "Объем планового производства по типам станций МВт*ч СЭС/ВЭС"),]
         #('23.11.2024', '2', '1991.87', '+3.49%', '698681.539', '+0.80%', '414180.837', '277239.000', '0.000', '330.103')
 
-        print("Подключение...")
+        print("Создание таблиц БД...")
 
         with psycopg2.connect(**self.conn_params) as conn:
             with conn.cursor() as cur:
@@ -131,21 +109,10 @@ class DBManager:
                     cur.execute(create_statistics)
                     print("Таблица statistics создана!")
                 except Exception as e:
-                    print(f'Исключение {e}. Запрос {create_statistics} не пашет')
+                    print(f'Исключение при создании таблицы  БД: {e}. Запрос {create_statistics} не пашет')
 
         conn.close()
 
-    def print_database_table(self, table_number=0):
-        if len(self.__tables) < table_number < len(self.__tables):
-            raise ValueError(f"В базе только {len(self.__tables)} таблицы: {self.__tables}.")
-        print(f"\n Таблица в базе {self.__db_name}(localhost) {self.__tables[table_number]}: \n")
-        with psycopg2.connect(**self.conn_params) as conn:
-            with conn.cursor() as cur:
-                cur.execute(f"SELECT * FROM {self.__tables[table_number]}")
-                rows = cur.fetchall()
-                for row in rows:
-                    print(row)
-        conn.close()
 
     def write_to_database(self, csv_file_path: str):
 
@@ -180,6 +147,50 @@ class DBManager:
             conn2.close()
 
 
+
+    @staticmethod
+    def drop_all():
+        postgre_params = {
+            "host": os.getenv('DB_POSTRESQL_HOST'),
+            "database": "postgres",
+            "user": os.getenv('DB_POSTRESQL_USER'),
+            "password": os.getenv('DB_POSTRESQL_PASSWORD')
+        }
+
+        con = psycopg2.connect(**postgre_params)
+        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cur = con.cursor()
+
+        cur.execute(f"DROP DATABASE {os.getenv('DB_POSTRESQL_DB_NAME')};")
+        cur.close()
+        con.close()
+        print(f"{os.getenv('DB_POSTRESQL_DB_NAME')}: база дропнута.! ")
+
+
+    @staticmethod
+    def get_tuple_list_from_file(filepath):
+
+        # correct_tuple_list = [("ID", "День", "Ценовая зона",	"Индекс РСВ на покупку руб/МВт*ч", "% изм", "Объем полного планового потребления МВт*ч",
+        #                   "% изм1", "Объем планового производства по типам станций МВт*ч ТЭС", "Объем планового производства по типам станций МВт*ч ГЭС",
+        #                   "Объем планового производства по типам станций МВт*ч АЭС", "Объем планового производства по типам станций МВт*ч СЭС/ВЭС"),]
+
+        correct_tuple_list=[]
+
+        with open(filepath, 'rt') as my_txt:
+            counter = 0
+
+            for data_line in my_txt:
+                if counter > 1:
+                    next_line = str(counter) + ", " + data_line.strip("\r""\n").replace(" ", "")
+                    next_tuple = tuple(next_line.split(","))
+
+                    correct_tuple_list.append(next_tuple)
+                counter +=1
+
+
+            return correct_tuple_list
+
+
     def get_data_from_bd(self, request, request_name):
         """
         Получает данные с помощью запроса
@@ -195,32 +206,25 @@ class DBManager:
                     print(row)
         conn.close()
 
-    @staticmethod
-    def get_tuple_list_from_file(filepath):
 
-        # correct_tuple_list = [("День", "Ценовая зона",	"Индекс РСВ на покупку руб/МВт*ч", "% изм", "Объем полного планового потребления МВт*ч",
-        #                   "% изм1", "Объем планового производства по типам станций МВт*ч ТЭС", "Объем планового производства по типам станций МВт*ч ГЭС",
-        #                   "Объем планового производства по типам станций МВт*ч АЭС", "Объем планового производства по типам станций МВт*ч СЭС/ВЭС"),]
-
-        correct_tuple_list=[]
-
-        with open(filepath, 'rt') as my_txt:
-            counter = 0
-
-            for data_line in my_txt:
-                if counter > 1:
-                    next_line = data_line.strip("\r""\n").replace(" ", "")
-                    next_tuple = tuple(next_line.split(","))
-
-                    correct_tuple_list.append(next_tuple)
-                counter +=1
+    def print_database_table(self, table_number=0):
+        if len(self.__tables) < table_number < len(self.__tables):
+            raise ValueError(f"В базе только {len(self.__tables)} таблицы: {self.__tables}.")
+        print(f"\n Таблица в базе {self.__db_name}(localhost) {self.__tables[table_number]}: \n")
+        with psycopg2.connect(**self.conn_params) as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT * FROM {self.__tables[table_number]}")
+                rows = cur.fetchall()
+                for row in rows:
+                    print(row)
+        conn.close()
 
 
-            return correct_tuple_list
+    def clear_all_tables(self):
+        print("clear_all_tables")
+        with psycopg2.connect(**self.conn_params) as conn:
+            with conn.cursor() as cur:
+                cur.execute('TRUNCATE TABLE statistics RESTART IDENTITY CASCADE;')
+                print("Таблица statistics удалена!")
 
-
-
-
-
-
-        tuple_string = [tuple([int_from_str(v) for v in line.values()]) for line in data_csv]
+        conn.close()
