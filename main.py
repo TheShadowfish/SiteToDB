@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import psycopg2
@@ -26,22 +27,29 @@ def user_interaction():
             filepath = req_res.get_data()
 
         elif what_to_do == "2":
-            DBman = DBManager()
-            DBman.drop_all()
-            DBman.create_database_script()
-            DBman.create_tables_script()
+            db_man = DBManager()
+            db_man.drop_all()
+            db_man.create_database_script()
+            db_man.create_tables_script()
 
 
-            DBman.write_to_database(filepath)
-            DBman.print_database_table(0)
+            db_man.write_to_database(filepath)
+            db_man.print_database_table(0)
 
 
         elif what_to_do == "3":
-            DBman = DBManager()
+            db_man = DBManager()
 
-            DBman.print_database_table(0)
+            if db_man.check_bd_script():
+                db_man.print_database_table(0)
+                db_man.get_data_from_bd("SELECT * FROM statistics;", "Таблица статистики")
 
-            DBman.get_data_from_bd("SELECT * FROM statistics;", "Таблица статистики")
+                db_man.get_data_from_bd("SELECT max(history_id) FROM statistics;", "Max 'history_id'")
+
+                db_man.get_data_from_bd(f"SELECT * FROM statistics where day={datetime.date.today().isoformat()};", f"day={datetime.date.today().isoformat()}")
+
+            else:
+                print("Database 'astenergo' does not exists or don't have table 'statistics'")
 
         elif what_to_do == "4":
             print("NotImplemented")

@@ -44,15 +44,17 @@ class DBManager:
             conn.close()
         except Exception as e:
             print(f'Исключение {e}. База данных {self.conn_params} и таблицы в ней еще не созданы')
-            if input('Создать БД автоматически? Без этого дальнейшая работа будет невозможна. Y/N') != 'Y':
-                exit(1)
-            else:
-                print(f'create {self.__db_name}...')
-                self.create_database_script()
-                print(f'generate tables {self.__tables}...')
-                self.create_tables_script()
+            return False
+
+            # if input('Создать БД автоматически? Без этого дальнейшая работа будет невозможна. Y/N') != 'Y':
+            #     exit(1)
+            # else:
+            #     print(f'create {self.__db_name}...')
+            #     self.create_database_script()
+            #     print(f'generate tables {self.__tables}...')
+            #     self.create_tables_script()
         else:
-            print(f'База данных {self.conn_params} уже существует. Продолжаем работу.')
+            return True
 
 
 
