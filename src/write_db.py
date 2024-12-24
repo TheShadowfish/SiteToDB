@@ -112,7 +112,7 @@ class DBManager:
 
             tuple_string_list = []
             for t in unfiltered_string_list:
-                if not self.check_in_db_table(t[1], t[2]):
+                if not self.check_in_db_table(t[0], t[1]):
                     tuple_string_list.append(t)
 
             if len(tuple_string_list) < 1:
@@ -256,10 +256,10 @@ class DBManager:
         conn.close()
 
     def clear_all_tables(self):
-        print("clear_all_tables")
+        # print("clear_all_tables")
         with psycopg2.connect(**self.conn_params) as conn:
             with conn.cursor() as cur:
                 cur.execute("TRUNCATE TABLE statistics RESTART IDENTITY CASCADE;")
-                print("Таблица statistics удалена!")
+                # print("Таблица statistics удалена!")
 
         conn.close()
