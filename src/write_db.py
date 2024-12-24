@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import psycopg2
@@ -24,6 +25,7 @@ class DBManager:
             "user": os.getenv("DB_POSTRESQL_USER"),
             "password": os.getenv("DB_POSTRESQL_PASSWORD")
         }
+        self.logger = Logger()
 
     def check_bd_script(self):
         "Check database exists (False/True)"
@@ -33,7 +35,7 @@ class DBManager:
                     cur.execute("SELECT * FROM statistics")
             conn.close()
         except Exception as e:
-            print(f"Исключение {e}. База данных {self.conn_params} и таблицы в ней еще не созданы")
+            self.logger(f"Исключение {e}. База данных {self.conn_params} и таблицы в ней еще не созданы")
             return False
         else:
             return True
@@ -53,7 +55,8 @@ class DBManager:
         cur.execute(f"CREATE DATABASE {self.__db_name};")
         cur.close()
         con.close()
-        print(f"{self.__db_name} создана!")
+
+        self.logger(f"{self.__db_name} создана!")
 
     def create_tables_script(self):
         """Create tables for statistics_DB"""
@@ -85,15 +88,15 @@ class DBManager:
             with conn.cursor() as cur:
                 try:
                     cur.execute(create_statistics)
-                    print("Таблица statistics создана!")
+                    self.logger("Таблица statistics создана!")
                 except Exception as e:
-                    print(f"Исключение при создании таблицы  БД: {e}. Запрос {create_statistics} не пашет")
+                    self.logger(f"Исключение при создании таблицы  БД: {e}. Запрос {create_statistics} не пашет")
         conn.close()
 
     def add_or_rewrite_db(self, csv_file_path: str, rewrite=False):
 
         if not os.path.exists(csv_file_path):
-            print(f"Данные по адресу {csv_file_path} отсутствуют.")
+            self.logger(f"Данные по адресу {csv_file_path} отсутствуют.")
             return
 
         if rewrite:
@@ -102,7 +105,7 @@ class DBManager:
 
             tuple_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
             if len(tuple_string_list) < 1:
-                print(f"File {csv_file_path} is empty!")
+                self.logger(f"File {csv_file_path} is empty!")
                 return
 
         else:
@@ -116,10 +119,10 @@ class DBManager:
                     tuple_string_list.append(t)
 
             if len(tuple_string_list) < 1:
-                print("No new data!")
+                self.logger("No new data!")
                 return
             else:
-                print("add new data:")
+                self.logger("add new data:")
                 [print(s) for s in tuple_string_list]
 
         string_s = ", ".join(["%s" for i in range(len(tuple_string_list[0]))])
@@ -131,8 +134,8 @@ class DBManager:
             cur.executemany(f"INSERT INTO {self.__tables[0]}({self.__columns_string}) VALUES ({string_s})", tuple_string_list)
             # cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", tuple_string_list)
         except Exception as e:
-            print(f"\n ОШИБКА: {e} при записи следующего:")
-            print(f"INSERT INTO {self.__tables[0]} VALUES ({self.__columns_string}) {tuple_string_list}")
+            self.logger(f"\n ОШИБКА: {e} при записи следующего:")
+            self.logger(f"INSERT INTO {self.__tables[0]} VALUES ({self.__columns_string}) {tuple_string_list}")
             input("Ошибка, ознакомьтесь! Программа продолжит работу после нажатия Enter. \n")
         else:
             # если запрос без ошибок - заносим в БД
@@ -144,35 +147,7 @@ class DBManager:
 
     def write_to_database(self, csv_file_path: str):
         self.add_or_rewrite_db(csv_file_path, True)
-        # if not os.path.exists(csv_file_path):
-        #     print(f"Данные по адресу {csv_file_path} отсутствуют.")
-        #     return
-        #
-        # tuple_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
-        # string_s = ", ".join(["%s" for i in range(len(tuple_string_list[0]))])
-        #
-        # conn2 = psycopg2.connect(**self.conn_params)
-        # cur = conn2.cursor()
-        # #
-        # # INSERT INTO student(first_name, last_name, birth_date, phone)
-        # # VALUES
-        # # ('Иванов', 'Петр', '01.04.1996', '8-999-876-54-32'),
-        # # ('Петров', 'Иван', '11.05.1994', '8-988-876-54-31'),
-        # # ('Сидорова', 'Евгения', '21.05.1994', '8-987-876-54-31');
-        #
-        # try:
-        #     cur.executemany(f"INSERT INTO {self.__tables[0]}({self.__columns_string}) VALUES ({string_s})", tuple_string_list)
-        #     # cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", tuple_string_list)
-        # except Exception as e:
-        #     print(f"\n ОШИБКА: {e} при записи следующего:")
-        #     print(f"INSERT INTO {self.__tables[0]} VALUES ({self.__columns_string}) {tuple_string_list}")
-        #     input("Ошибка, ознакомьтесь! Программа продолжит работу после нажатия Enter. \n")
-        # else:
-        #     # если запрос без ошибок - заносим в БД
-        #     conn2.commit()
-        # finally:
-        #     cur.close()
-        #     conn2.close()
+
 
     def add_to_database(self, csv_file_path: str):
         self.add_or_rewrite_db(csv_file_path, False)
@@ -191,7 +166,7 @@ class DBManager:
                 if int(rows[0][0]) > 0:
                     is_yet = True
                 else:
-                    print(f"...FOUND NEW DATA!: {day}, {price_zone}")
+                    self.logger(f"...FOUND NEW DATA!: {day}, {price_zone}")
                     is_yet = False
         conn.close()
         return is_yet
@@ -256,10 +231,22 @@ class DBManager:
         conn.close()
 
     def clear_all_tables(self):
-        # print("clear_all_tables")
         with psycopg2.connect(**self.conn_params) as conn:
             with conn.cursor() as cur:
                 cur.execute("TRUNCATE TABLE statistics RESTART IDENTITY CASCADE;")
-                # print("Таблица statistics удалена!")
 
         conn.close()
+
+
+class Logger:
+    def __init__(self, filename):
+        self.filename = filename
+
+    def __call__(self, message):
+        with open(self.filename, 'at') as log_file:
+            current_date = datetime.now().isoformat()
+            log_file.write(current_date +": " + message)
+            log_file.write('\n')
+
+
+# logger = Logger("log.txt")

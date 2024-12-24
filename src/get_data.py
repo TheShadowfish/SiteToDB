@@ -12,11 +12,14 @@ from selenium_stealth import stealth
 import datetime
 from selenium.webdriver.support import expected_conditions as EC
 
+from src.write_db import Logger
+
 
 class SelAtsenergo:
 
     def __init__(self):
         self.__url = "http://www.atsenergo.ru/results/rsv/statistics"
+        self.logger = Logger()
 
     @staticmethod
     def get_random_chrome_user_agent():
