@@ -19,7 +19,7 @@ class SelAtsenergo:
 
     def __init__(self):
         self.__url = "http://www.atsenergo.ru/results/rsv/statistics"
-        self.logger = Logger()
+        self.logger = Logger(os.getenv("LOG_FILE_NAME"))
 
     @staticmethod
     def get_random_chrome_user_agent():

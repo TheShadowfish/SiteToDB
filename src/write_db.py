@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import os
 
 import psycopg2
@@ -25,7 +25,7 @@ class DBManager:
             "user": os.getenv("DB_POSTRESQL_USER"),
             "password": os.getenv("DB_POSTRESQL_PASSWORD")
         }
-        self.logger = Logger()
+        self.logger = Logger(os.getenv("LOG_FILE_NAME"))
 
     def check_bd_script(self):
         "Check database exists (False/True)"
