@@ -73,7 +73,7 @@ class DBManager:
                                     );"
 
         #  correct_tuple_list = [("День", "Ценовая зона",	"Индекс РСВ на покупку руб/МВт*ч", "% изм",
-        #  "Объем полного планового потребления МВт*ч",
+        #                   "Объем полного планового потребления МВт*ч",
         #                   "% изм1", "Объем планового производства по типам станций МВт*ч ТЭС",
         #                   "Объем планового производства по типам станций МВт*ч ГЭС",
         #                   "Объем планового производства по типам станций МВт*ч АЭС",
@@ -90,23 +90,42 @@ class DBManager:
                     print(f"Исключение при создании таблицы  БД: {e}. Запрос {create_statistics} не пашет")
         conn.close()
 
-    def write_to_database(self, csv_file_path: str):
+    def add_or_rewrite_db(self, csv_file_path: str, rewrite=False):
 
         if not os.path.exists(csv_file_path):
             print(f"Данные по адресу {csv_file_path} отсутствуют.")
             return
 
-        tuple_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
+        if rewrite:
+            # clear old data to write new
+            self.clear_all_tables()
+
+            tuple_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
+            if len(tuple_string_list) < 1:
+                print(f"File {csv_file_path} is empty!")
+                return
+
+        else:
+
+            unfiltered_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
+            # string_s = ", ".join(["%s" for i in range(len(tuple_string_list[0]))])
+
+            tuple_string_list = []
+            for t in unfiltered_string_list:
+                if not self.check_in_db_table(t[1], t[2]):
+                    tuple_string_list.append(t)
+
+            if len(tuple_string_list) < 1:
+                print("No new data!")
+                return
+            else:
+                print("add new data:")
+                [print(s) for s in tuple_string_list]
+
         string_s = ", ".join(["%s" for i in range(len(tuple_string_list[0]))])
 
         conn2 = psycopg2.connect(**self.conn_params)
         cur = conn2.cursor()
-        #
-        # INSERT INTO student(first_name, last_name, birth_date, phone)
-        # VALUES
-        # ('Иванов', 'Петр', '01.04.1996', '8-999-876-54-32'),
-        # ('Петров', 'Иван', '11.05.1994', '8-988-876-54-31'),
-        # ('Сидорова', 'Евгения', '21.05.1994', '8-987-876-54-31');
 
         try:
             cur.executemany(f"INSERT INTO {self.__tables[0]}({self.__columns_string}) VALUES ({string_s})", tuple_string_list)
@@ -122,44 +141,42 @@ class DBManager:
             cur.close()
             conn2.close()
 
-    def add_to_database(self, csv_file_path: str):
 
-        if not os.path.exists(csv_file_path):
-            print(f"Данные по адресу {csv_file_path} отсутствуют.")
-            return
-
-        tuple_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
+    def write_to_database(self, csv_file_path: str):
+        self.add_or_rewrite_db(csv_file_path, True)
+        # if not os.path.exists(csv_file_path):
+        #     print(f"Данные по адресу {csv_file_path} отсутствуют.")
+        #     return
+        #
+        # tuple_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
         # string_s = ", ".join(["%s" for i in range(len(tuple_string_list[0]))])
-
-        new_tuple_string_list = []
-        for t in tuple_string_list:
-            if not self.check_in_db_table(t[1], t[2]):
-                new_tuple_string_list.append(t)
-
-            # self.get_data_from_bd(f"SELECT * FROM statistics where day='{date}' and price_zone={price_zone};",
-            #                       f"'та же дата и ценовая зона'")
-
-        # print(f"\n +++++++  INSERT INTO {self.__tables[0]} VALUES ({string_s}), tuple_string \n +++++++")
-        # [print(s) for s in tuple_string]
-        # input("press any key...")
-
-        [print(s) for s in new_tuple_string_list]
-
+        #
         # conn2 = psycopg2.connect(**self.conn_params)
         # cur = conn2.cursor()
+        # #
+        # # INSERT INTO student(first_name, last_name, birth_date, phone)
+        # # VALUES
+        # # ('Иванов', 'Петр', '01.04.1996', '8-999-876-54-32'),
+        # # ('Петров', 'Иван', '11.05.1994', '8-988-876-54-31'),
+        # # ('Сидорова', 'Евгения', '21.05.1994', '8-987-876-54-31');
         #
         # try:
-        #     cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", new_tuple_string_list)
+        #     cur.executemany(f"INSERT INTO {self.__tables[0]}({self.__columns_string}) VALUES ({string_s})", tuple_string_list)
+        #     # cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", tuple_string_list)
         # except Exception as e:
-        #     print(f'\n ОШИБКА: {e} при записи следующего:')
-        #     print(f"INSERT INTO {self.__tables[0]} VALUES ({string_s}) {new_tuple_string_list}")
-        #     input('Ошибка, ознакомьтесь! Программа продолжит работу после нажатия Enter. \n')
+        #     print(f"\n ОШИБКА: {e} при записи следующего:")
+        #     print(f"INSERT INTO {self.__tables[0]} VALUES ({self.__columns_string}) {tuple_string_list}")
+        #     input("Ошибка, ознакомьтесь! Программа продолжит работу после нажатия Enter. \n")
         # else:
         #     # если запрос без ошибок - заносим в БД
         #     conn2.commit()
         # finally:
         #     cur.close()
         #     conn2.close()
+
+    def add_to_database(self, csv_file_path: str):
+        self.add_or_rewrite_db(csv_file_path, False)
+
 
     def check_in_db_table(self, day, price_zone):
         """Check if this string in database yet (False/True)"""

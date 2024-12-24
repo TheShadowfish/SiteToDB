@@ -14,21 +14,22 @@ def user_interaction():
 
         what_to_do = input("Program menu: \n"
                            "Get data from site (selenium) (1) \n"
-                           "ReWrite file to DB (2) \n"
-                           "Print db (3) \n"
-                           "add new data (4) \n"
-                           "Create daemon to update db once a day (5) \n"
+                           "Drop and create DB (2) \n"
+                           "Rewrite table from file (3) \n"
+                           "Add data from file (4) \n"          
+                           "Print db (5) \n"
+                           "Create daemon to update db once a day (6) \n"
                            "Exit - any other key \n")
 
-        filepath = "data/my_csv_2024-12-23.csv"
+        filepath = "data/my_csv_2024-12-22.csv"
+        db_man = DBManager()
 
         if what_to_do == "1":
             req_res = SelAtsenergo()
             filepath = req_res.get_data()
 
         elif what_to_do == "2":
-            db_man = DBManager()
-            db_man.drop_all()
+            # db_man.drop_all()
             if db_man.check_bd_script():
                 db_man.drop_all()
             db_man.create_database_script()
@@ -38,7 +39,19 @@ def user_interaction():
             db_man.print_database_table(0)
 
         elif what_to_do == "3":
-            db_man = DBManager()
+            if db_man.check_bd_script():
+                db_man.write_to_database(filepath)
+            else:
+                print("Database 'astenergo' does not exists or don't have table 'statistics'")
+
+        elif what_to_do == "4":
+            filepath = "data/my_csv_2024-12-24.csv"
+            if db_man.check_bd_script():
+                db_man.add_to_database(filepath)
+            else:
+                print("Database 'astenergo' does not exists or don't have table 'statistics'")
+
+        elif what_to_do == "5":
 
             if db_man.check_bd_script():
                 db_man.print_database_table(0)
@@ -53,13 +66,7 @@ def user_interaction():
             else:
                 print("Database 'astenergo' does not exists or don't have table 'statistics'")
 
-        elif what_to_do == "4":
-            db_man = DBManager()
-            if db_man.check_bd_script():
-                db_man.add_to_database("data/my_csv_2024-12-24.csv")
-                # db_man.print_database_table(0)
-
-        elif what_to_do == "5":
+        elif what_to_do == "6":
             print("NotImplemented")
 
         else:
