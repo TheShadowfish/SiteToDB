@@ -123,12 +123,12 @@ class DBManager:
             return
 
 
-        tuple_string = DBManager.get_tuple_list_from_file(csv_file_path)
-        string_s = ', '.join(['%s' for i in range(len(tuple_string[0]))])
+        tuple_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
+        string_s = ', '.join(['%s' for i in range(len(tuple_string_list[0]))])
 
-        print(f"\n +++++++  INSERT INTO {self.__tables[0]} VALUES ({string_s}), tuple_string \n +++++++")
-        [print(s) for s in tuple_string]
-        input("press any key...")
+        # print(f"\n +++++++  INSERT INTO {self.__tables[0]} VALUES ({string_s}), tuple_string \n +++++++")
+        # [print(s) for s in tuple_string]
+        # input("press any key...")
 
 
 
@@ -136,10 +136,10 @@ class DBManager:
         cur = conn2.cursor()
 
         try:
-            cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", tuple_string)
+            cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", tuple_string_list)
         except Exception as e:
             print(f'\n ОШИБКА: {e} при записи следующего:')
-            print(f"INSERT INTO {self.__tables[0]} VALUES ({string_s}) {tuple_string}")
+            print(f"INSERT INTO {self.__tables[0]} VALUES ({string_s}) {tuple_string_list}")
             input('Ошибка, ознакомьтесь! Программа продолжит работу после нажатия Enter. \n')
         else:
             # если запрос без ошибок - заносим в БД
@@ -147,6 +147,76 @@ class DBManager:
         finally:
             cur.close()
             conn2.close()
+
+    def add_to_database(self, csv_file_path: str):
+
+        if not os.path.exists(csv_file_path):
+            print(f"Данные по адресу {csv_file_path} отсутствуют.")
+            return
+
+        tuple_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
+        string_s = ', '.join(['%s' for i in range(len(tuple_string_list[0]))])
+
+
+        new_tuple_string_list = []
+        for t in tuple_string_list:
+            date = t[1]
+            price_zone = t[2]
+            if not self.check_in_db_table(t[1], t[2]):
+                new_tuple_string_list.append(t)
+
+            # self.get_data_from_bd(f"SELECT * FROM statistics where day='{date}' and price_zone={price_zone};",
+            #                       f"'та же дата и ценовая зона'")
+
+        # print(f"\n +++++++  INSERT INTO {self.__tables[0]} VALUES ({string_s}), tuple_string \n +++++++")
+        # [print(s) for s in tuple_string]
+        # input("press any key...")
+
+        [print(s) for s in new_tuple_string_list]
+
+        # conn2 = psycopg2.connect(**self.conn_params)
+        # cur = conn2.cursor()
+        #
+        # try:
+        #     cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", new_tuple_string_list)
+        # except Exception as e:
+        #     print(f'\n ОШИБКА: {e} при записи следующего:')
+        #     print(f"INSERT INTO {self.__tables[0]} VALUES ({string_s}) {new_tuple_string_list}")
+        #     input('Ошибка, ознакомьтесь! Программа продолжит работу после нажатия Enter. \n')
+        # else:
+        #     # если запрос без ошибок - заносим в БД
+        #     conn2.commit()
+        # finally:
+        #     cur.close()
+        #     conn2.close()
+
+
+    def check_in_db_table(self, day, price_zone):
+        """
+        Получает данные с помощью запроса
+        Потом это выводится на печать
+        request_name - что запрос должен показать
+        """
+
+        request = f"SELECT count(*) FROM statistics where day='{day}' and price_zone={price_zone};"
+        is_yet = True
+
+        with psycopg2.connect(**self.conn_params) as conn:
+            with conn.cursor() as cur:
+                cur.execute(request)
+                rows = cur.fetchall()
+                # for row in rows:
+                #     print(row)
+                #     print(len(rows))
+                if int(rows[0][0]) > 0:
+                    is_yet = True
+                else:
+                    print(f"...FOUND NEW DATA!: {day}, {price_zone}")
+                    is_yet = False
+
+
+        conn.close()
+        return is_yet
 
 
 

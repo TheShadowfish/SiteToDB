@@ -16,7 +16,7 @@ def user_interaction():
                            "Get data from site (selenium) (1) \n"
                            "ReWrite file to DB (2) \n"
                            "Print db (3) \n"
-                           "DROP ALL !!! (4) \n"
+                           "add new data (4) \n"
                            "Create daemon to update db once a day (5) \n"
                            "Exit - any other key \n")
 
@@ -28,7 +28,8 @@ def user_interaction():
 
         elif what_to_do == "2":
             db_man = DBManager()
-            db_man.drop_all()
+            if db_man.check_bd_script():
+                db_man.drop_all()
             db_man.create_database_script()
             db_man.create_tables_script()
 
@@ -46,13 +47,18 @@ def user_interaction():
 
                 db_man.get_data_from_bd("SELECT max(history_id) FROM statistics;", "Max 'history_id'")
 
-                db_man.get_data_from_bd(f"SELECT * FROM statistics where day={datetime.date.today().isoformat()};", f"day={datetime.date.today().isoformat()}")
+                db_man.get_data_from_bd(f"SELECT * FROM statistics where day='{datetime.date.today().isoformat()}';", f"day='{datetime.date.today().isoformat()}'")
 
             else:
                 print("Database 'astenergo' does not exists or don't have table 'statistics'")
 
         elif what_to_do == "4":
-            print("NotImplemented")
+            db_man = DBManager()
+            if db_man.check_bd_script():
+
+
+                db_man.add_to_database("data/my_csv_2024-12-24.csv")
+                # db_man.print_database_table(0)
 
         elif what_to_do == "5":
             print("NotImplemented")
