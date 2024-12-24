@@ -3,14 +3,9 @@ import os
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-# from decouple import config
 from dotenv import load_dotenv
 
 load_dotenv()
-
-
-# from abc import ABC, abstractmethod
-
 
 class DBManager:
     """Связь с базой данных"""
@@ -30,10 +25,8 @@ class DBManager:
             "password": os.getenv("DB_POSTRESQL_PASSWORD")
         }
 
-        # self.check_bd_script()
-
     def check_bd_script(self):
-
+        "Check database exists (False/True)"
         try:
             with psycopg2.connect(**self.conn_params) as conn:
                 with conn.cursor() as cur:
@@ -110,6 +103,7 @@ class DBManager:
         cur = conn2.cursor()
 
         try:
+            cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({self.__columns_string})", tuple_string_list)
             cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", tuple_string_list)
         except Exception as e:
             print(f"\n ОШИБКА: {e} при записи следующего:")
@@ -165,7 +159,7 @@ class DBManager:
         """Check if this string in database yet (False/True)"""
 
         request = f"SELECT count(*) FROM statistics where day='{day}' and price_zone={price_zone};"
-        is_yet = True
+        # is_yet = True
 
         with psycopg2.connect(**self.conn_params) as conn:
             with conn.cursor() as cur:
@@ -187,7 +181,6 @@ class DBManager:
             "user": os.getenv("DB_POSTRESQL_USER"),
             "password": os.getenv("DB_POSTRESQL_PASSWORD")
         }
-
         con = psycopg2.connect(**postgre_params)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -205,7 +198,8 @@ class DBManager:
             counter = 0
             for data_line in my_txt:
                 if counter > 1:
-                    next_line = str(counter) + ", " + data_line.strip("\r""\n").replace(" ", "")
+                    # next_line = str(counter) + ", " + data_line.strip("\r""\n").replace(" ", "")
+                    next_line = data_line.strip("\r""\n").replace(" ", "")
                     next_tuple = tuple(next_line.split(","))
                     correct_tuple_list.append(next_tuple)
                 counter += 1
