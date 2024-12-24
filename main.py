@@ -29,9 +29,12 @@ def user_interaction():
             filepath = req_res.get_data()
 
         elif what_to_do == "2":
-            # db_man.drop_all()
-            if db_man.check_bd_script():
+            try:
                 db_man.drop_all()
+            except Exception as e:
+                print(e)
+            # if db_man.check_bd_script():
+            #     db_man.drop_all()
             db_man.create_database_script()
             db_man.create_tables_script()
 
