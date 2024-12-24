@@ -1,8 +1,8 @@
 import datetime
-import os
+# import os
 
-import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+# import psycopg2
+# from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 from src.get_data import SelAtsenergo
 from src.write_db import DBManager
@@ -33,10 +33,8 @@ def user_interaction():
             db_man.create_database_script()
             db_man.create_tables_script()
 
-
             db_man.write_to_database(filepath)
             db_man.print_database_table(0)
-
 
         elif what_to_do == "3":
             db_man = DBManager()
@@ -47,7 +45,9 @@ def user_interaction():
 
                 db_man.get_data_from_bd("SELECT max(history_id) FROM statistics;", "Max 'history_id'")
 
-                db_man.get_data_from_bd(f"SELECT * FROM statistics where day='{datetime.date.today().isoformat()}';", f"day='{datetime.date.today().isoformat()}'")
+                db_man.get_data_from_bd(
+                    f"SELECT * FROM statistics where day='{datetime.date.today().isoformat()}';",
+                    f"day='{datetime.date.today().isoformat()}'")
 
             else:
                 print("Database 'astenergo' does not exists or don't have table 'statistics'")
@@ -55,8 +55,6 @@ def user_interaction():
         elif what_to_do == "4":
             db_man = DBManager()
             if db_man.check_bd_script():
-
-
                 db_man.add_to_database("data/my_csv_2024-12-24.csv")
                 # db_man.print_database_table(0)
 
@@ -65,24 +63,6 @@ def user_interaction():
 
         else:
             exit()
-
-def drop_all():
-    postgre_params = {
-        "host": os.getenv('DB_POSTRESQL_HOST'),
-        "database": "postgres",
-        "user": os.getenv('DB_POSTRESQL_USER'),
-        "password": os.getenv('DB_POSTRESQL_PASSWORD')
-    }
-
-    con = psycopg2.connect(**postgre_params)
-    con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    cur = con.cursor()
-
-    cur.execute(f"DROP DATABASE {os.getenv('DB_POSTRESQL_DB_NAME')};")
-    cur.close()
-    con.close()
-    print(f"{os.getenv('DB_POSTRESQL_DB_NAME')}: база дропнута.! ")
-
 
 
 # начало программы

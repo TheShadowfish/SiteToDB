@@ -1,5 +1,3 @@
-import csv
-import json
 import os
 
 import psycopg2
@@ -15,73 +13,57 @@ load_dotenv()
 
 
 class DBManager:
-    """
-    Связь с базой данных
-    """
+    """Связь с базой данных"""
 
     def __init__(self):
-        self.file_extension = 'PostgresSQL'
-        self.__db_name = os.getenv('DB_POSTRESQL_DB_NAME')
-        self.__tables = ['statistics',]
+        self.file_extension = "PostgresSQL"
+        self.__db_name = os.getenv("DB_POSTRESQL_DB_NAME")
+        self.__tables = ["statistics",]
+        self.__columns_string = "day, price_zone, PCB_index, percent_change, planed_volume_consumption, \
+                                    percent_change_2, planed_volume_prod_TES, planed_volume_prod_GES, \
+                                    planed_volume_prod_AES, planed_volume_prod_SES_VES"
 
         self.conn_params = {
-            "host": os.getenv('DB_POSTRESQL_HOST'),
+            "host": os.getenv("DB_POSTRESQL_HOST"),
             "database": self.__db_name,
-            "user": os.getenv('DB_POSTRESQL_USER'),
-            "password": os.getenv('DB_POSTRESQL_PASSWORD')
+            "user": os.getenv("DB_POSTRESQL_USER"),
+            "password": os.getenv("DB_POSTRESQL_PASSWORD")
         }
 
         # self.check_bd_script()
 
     def check_bd_script(self):
-        """
-        Create database if not exist
-        """
+
         try:
             with psycopg2.connect(**self.conn_params) as conn:
                 with conn.cursor() as cur:
                     cur.execute("SELECT * FROM statistics")
             conn.close()
         except Exception as e:
-            print(f'Исключение {e}. База данных {self.conn_params} и таблицы в ней еще не созданы')
+            print(f"Исключение {e}. База данных {self.conn_params} и таблицы в ней еще не созданы")
             return False
-
-            # if input('Создать БД автоматически? Без этого дальнейшая работа будет невозможна. Y/N') != 'Y':
-            #     exit(1)
-            # else:
-            #     print(f'create {self.__db_name}...')
-            #     self.create_database_script()
-            #     print(f'generate tables {self.__tables}...')
-            #     self.create_tables_script()
         else:
             return True
 
-
-
     def create_database_script(self):
-        """Create database if not exists"""
+        """Create database"""
         postgre_params = {
-            "host": os.getenv('DB_POSTRESQL_HOST'),
+            "host": os.getenv("DB_POSTRESQL_HOST"),
             "database": "postgres",
-            "user": os.getenv('DB_POSTRESQL_USER'),
-            "password": os.getenv('DB_POSTRESQL_PASSWORD')}
+            "user": os.getenv("DB_POSTRESQL_USER"),
+            "password": os.getenv("DB_POSTRESQL_PASSWORD")}
 
         con = psycopg2.connect(**postgre_params)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
-        cur.execute(f'CREATE DATABASE {self.__db_name};')
+        cur.execute(f"CREATE DATABASE {self.__db_name};")
         cur.close()
         con.close()
-        print(f"{self.__db_name} создана! ")
-
-
-
+        print(f"{self.__db_name} создана!")
 
     def create_tables_script(self):
-        """
-        Create tables for statistics_DB
-        """
+        """Create tables for statistics_DB"""
 
         create_statistics = "CREATE TABLE statistics ( \
                                     history_id int UNIQUE PRIMARY KEY, \
@@ -97,13 +79,14 @@ class DBManager:
                                     planed_volume_prod_SES_VES float NOT NULL \
                                     );"
 
-
-        # correct_tuple_list = [("День", "Ценовая зона",	"Индекс РСВ на покупку руб/МВт*ч", "% изм", "Объем полного планового потребления МВт*ч",
-        #                   "% изм1", "Объем планового производства по типам станций МВт*ч ТЭС", "Объем планового производства по типам станций МВт*ч ГЭС",
-        #                   "Объем планового производства по типам станций МВт*ч АЭС", "Объем планового производства по типам станций МВт*ч СЭС/ВЭС"),]
-        #('23.11.2024', '2', '1991.87', '+3.49%', '698681.539', '+0.80%', '414180.837', '277239.000', '0.000', '330.103')
-
-        print("Создание таблиц БД...")
+        #  correct_tuple_list = [("День", "Ценовая зона",	"Индекс РСВ на покупку руб/МВт*ч", "% изм",
+        #  "Объем полного планового потребления МВт*ч",
+        #                   "% изм1", "Объем планового производства по типам станций МВт*ч ТЭС",
+        #                   "Объем планового производства по типам станций МВт*ч ГЭС",
+        #                   "Объем планового производства по типам станций МВт*ч АЭС",
+        #                   "Объем планового производства по типам станций МВт*ч СЭС/ВЭС"),]
+        # ('23.11.2024', '2', '1991.87', '+3.49%', '698681.539',
+        # '+0.80%', '414180.837', '277239.000', '0.000', '330.103')
 
         with psycopg2.connect(**self.conn_params) as conn:
             with conn.cursor() as cur:
@@ -111,10 +94,8 @@ class DBManager:
                     cur.execute(create_statistics)
                     print("Таблица statistics создана!")
                 except Exception as e:
-                    print(f'Исключение при создании таблицы  БД: {e}. Запрос {create_statistics} не пашет')
-
+                    print(f"Исключение при создании таблицы  БД: {e}. Запрос {create_statistics} не пашет")
         conn.close()
-
 
     def write_to_database(self, csv_file_path: str):
 
@@ -122,15 +103,8 @@ class DBManager:
             print(f"Данные по адресу {csv_file_path} отсутствуют.")
             return
 
-
         tuple_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
-        string_s = ', '.join(['%s' for i in range(len(tuple_string_list[0]))])
-
-        # print(f"\n +++++++  INSERT INTO {self.__tables[0]} VALUES ({string_s}), tuple_string \n +++++++")
-        # [print(s) for s in tuple_string]
-        # input("press any key...")
-
-
+        string_s = ", ".join(["%s" for i in range(len(tuple_string_list[0]))])
 
         conn2 = psycopg2.connect(**self.conn_params)
         cur = conn2.cursor()
@@ -138,9 +112,9 @@ class DBManager:
         try:
             cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", tuple_string_list)
         except Exception as e:
-            print(f'\n ОШИБКА: {e} при записи следующего:')
+            print(f"\n ОШИБКА: {e} при записи следующего:")
             print(f"INSERT INTO {self.__tables[0]} VALUES ({string_s}) {tuple_string_list}")
-            input('Ошибка, ознакомьтесь! Программа продолжит работу после нажатия Enter. \n')
+            input("Ошибка, ознакомьтесь! Программа продолжит работу после нажатия Enter. \n")
         else:
             # если запрос без ошибок - заносим в БД
             conn2.commit()
@@ -155,13 +129,10 @@ class DBManager:
             return
 
         tuple_string_list = DBManager.get_tuple_list_from_file(csv_file_path)
-        string_s = ', '.join(['%s' for i in range(len(tuple_string_list[0]))])
-
+        # string_s = ", ".join(["%s" for i in range(len(tuple_string_list[0]))])
 
         new_tuple_string_list = []
         for t in tuple_string_list:
-            date = t[1]
-            price_zone = t[2]
             if not self.check_in_db_table(t[1], t[2]):
                 new_tuple_string_list.append(t)
 
@@ -190,13 +161,8 @@ class DBManager:
         #     cur.close()
         #     conn2.close()
 
-
     def check_in_db_table(self, day, price_zone):
-        """
-        Получает данные с помощью запроса
-        Потом это выводится на печать
-        request_name - что запрос должен показать
-        """
+        """Check if this string in database yet (False/True)"""
 
         request = f"SELECT count(*) FROM statistics where day='{day}' and price_zone={price_zone};"
         is_yet = True
@@ -205,28 +171,21 @@ class DBManager:
             with conn.cursor() as cur:
                 cur.execute(request)
                 rows = cur.fetchall()
-                # for row in rows:
-                #     print(row)
-                #     print(len(rows))
                 if int(rows[0][0]) > 0:
                     is_yet = True
                 else:
                     print(f"...FOUND NEW DATA!: {day}, {price_zone}")
                     is_yet = False
-
-
         conn.close()
         return is_yet
-
-
 
     @staticmethod
     def drop_all():
         postgre_params = {
-            "host": os.getenv('DB_POSTRESQL_HOST'),
+            "host": os.getenv("DB_POSTRESQL_HOST"),
             "database": "postgres",
-            "user": os.getenv('DB_POSTRESQL_USER'),
-            "password": os.getenv('DB_POSTRESQL_PASSWORD')
+            "user": os.getenv("DB_POSTRESQL_USER"),
+            "password": os.getenv("DB_POSTRESQL_PASSWORD")
         }
 
         con = psycopg2.connect(**postgre_params)
@@ -238,30 +197,19 @@ class DBManager:
         con.close()
         print(f"{os.getenv('DB_POSTRESQL_DB_NAME')}: база дропнута.! ")
 
-
     @staticmethod
     def get_tuple_list_from_file(filepath):
-
-        # correct_tuple_list = [("ID", "День", "Ценовая зона",	"Индекс РСВ на покупку руб/МВт*ч", "% изм", "Объем полного планового потребления МВт*ч",
-        #                   "% изм1", "Объем планового производства по типам станций МВт*ч ТЭС", "Объем планового производства по типам станций МВт*ч ГЭС",
-        #                   "Объем планового производства по типам станций МВт*ч АЭС", "Объем планового производства по типам станций МВт*ч СЭС/ВЭС"),]
-
-        correct_tuple_list=[]
-
-        with open(filepath, 'rt') as my_txt:
+        """Lines from cvs file to tuple list"""
+        correct_tuple_list = []
+        with open(filepath, "rt") as my_txt:
             counter = 0
-
             for data_line in my_txt:
                 if counter > 1:
                     next_line = str(counter) + ", " + data_line.strip("\r""\n").replace(" ", "")
                     next_tuple = tuple(next_line.split(","))
-
                     correct_tuple_list.append(next_tuple)
-                counter +=1
-
-
+                counter += 1
             return correct_tuple_list
-
 
     def get_data_from_bd(self, request, request_name):
         """
@@ -278,7 +226,6 @@ class DBManager:
                     print(row)
         conn.close()
 
-
     def print_database_table(self, table_number=0):
         if len(self.__tables) < table_number < len(self.__tables):
             raise ValueError(f"В базе только {len(self.__tables)} таблицы: {self.__tables}.")
@@ -291,12 +238,11 @@ class DBManager:
                     print(row)
         conn.close()
 
-
     def clear_all_tables(self):
         print("clear_all_tables")
         with psycopg2.connect(**self.conn_params) as conn:
             with conn.cursor() as cur:
-                cur.execute('TRUNCATE TABLE statistics RESTART IDENTITY CASCADE;')
+                cur.execute("TRUNCATE TABLE statistics RESTART IDENTITY CASCADE;")
                 print("Таблица statistics удалена!")
 
         conn.close()

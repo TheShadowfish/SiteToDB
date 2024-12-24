@@ -1,4 +1,4 @@
-import time
+# import time
 
 import pandas as pd
 
@@ -70,11 +70,7 @@ class SelAtsenergo:
 
         driver.get(self.__url)
 
-        table = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "aid_stats_table"))
-        )
-
-
+        table = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "aid_stats_table")))
 
         # time.sleep(15)
         # table = driver.find_element(By.ID, "aid_stats_table")
@@ -86,10 +82,6 @@ class SelAtsenergo:
         df = pd.read_html(t_data)
 
         current_date = datetime.date.today().isoformat()
-
-        df[0].to_json(f"data/my_csv_{current_date}.json" ,index=False)
-
-        print(df[0].to_dict())
 
         # and now we get this table
         df[0].to_csv(f"data/my_csv_{current_date}.csv", index=False)
