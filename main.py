@@ -28,6 +28,7 @@ def user_interaction():
 
         elif what_to_do == "2":
             db_man = DBManager()
+            db_man.drop_all()
             if db_man.check_bd_script():
                 db_man.drop_all()
             db_man.create_database_script()

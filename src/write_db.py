@@ -59,7 +59,7 @@ class DBManager:
         """Create tables for statistics_DB"""
 
         create_statistics = "CREATE TABLE statistics ( \
-                                    history_id int UNIQUE PRIMARY KEY, \
+                                    history_id SERIAL PRIMARY KEY, \
                                     day date NOT NULL, \
                                     price_zone int  NOT NULL, \
                                     PCB_index float not null, \
@@ -101,13 +101,19 @@ class DBManager:
 
         conn2 = psycopg2.connect(**self.conn_params)
         cur = conn2.cursor()
+        #
+        # INSERT INTO student(first_name, last_name, birth_date, phone)
+        # VALUES
+        # ('Иванов', 'Петр', '01.04.1996', '8-999-876-54-32'),
+        # ('Петров', 'Иван', '11.05.1994', '8-988-876-54-31'),
+        # ('Сидорова', 'Евгения', '21.05.1994', '8-987-876-54-31');
 
         try:
-            cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({self.__columns_string})", tuple_string_list)
-            cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", tuple_string_list)
+            cur.executemany(f"INSERT INTO {self.__tables[0]}({self.__columns_string}) VALUES ({string_s})", tuple_string_list)
+            # cur.executemany(f"INSERT INTO {self.__tables[0]} VALUES ({string_s})", tuple_string_list)
         except Exception as e:
             print(f"\n ОШИБКА: {e} при записи следующего:")
-            print(f"INSERT INTO {self.__tables[0]} VALUES ({string_s}) {tuple_string_list}")
+            print(f"INSERT INTO {self.__tables[0]} VALUES ({self.__columns_string}) {tuple_string_list}")
             input("Ошибка, ознакомьтесь! Программа продолжит работу после нажатия Enter. \n")
         else:
             # если запрос без ошибок - заносим в БД
